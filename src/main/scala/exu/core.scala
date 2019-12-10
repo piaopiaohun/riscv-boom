@@ -861,6 +861,7 @@ class BoomCore(implicit p: Parameters) extends BoomModule
   // reading requires serializing the entire pipeline
   csr.io.fcsr_flags.valid := rob.io.commit.fflags.valid
   csr.io.fcsr_flags.bits  := rob.io.commit.fflags.bits
+  csr.io.set_fs_dirty.get := rob.io.commit.fflags.valid
 
   exe_units.withFilter(_.hasFcsr).map(_.io.fcsr_rm := csr.io.fcsr_rm)
   io.fcsr_rm := csr.io.fcsr_rm
@@ -1303,6 +1304,7 @@ class BoomCore(implicit p: Parameters) extends BoomModule
         val plicSize = "0x" + f"${PLICConsts.size}%X"
         val clintBase = "0x" + f"${clintParams.baseAddress}%X"
         val clintSize = "0x" + f"${CLINTConsts.size}%X"
+        val memSize = "0x" + f"${extMemParams.master.size}%X"
 
         // instantiate dromajo cosim bbox
         val dromajo = Module(new DromajoCosimBlackBox(
@@ -1315,7 +1317,8 @@ class BoomCore(implicit p: Parameters) extends BoomModule
           plicBase,
           plicSize,
           clintBase,
-          clintSize))
+          clintSize,
+          memSize))
 
         def getInst(uop: MicroOp): UInt = {
           Mux(uop.is_rvc, Cat(0.U(16.W), uop.debug_inst(15,0)), uop.debug_inst)
@@ -1329,9 +1332,9 @@ class BoomCore(implicit p: Parameters) extends BoomModule
         dromajo.io.reset := reset
         dromajo.io.valid := rob.io.commit.valids.asUInt
         dromajo.io.hartid := io.hartid
-        dromajo.io.pc     := Cat(rob.io.commit.uops.map(uop => Sext(uop.debug_pc(vaddrBits-1,0), xLen)))
-        dromajo.io.inst   := Cat(rob.io.commit.uops.map(uop => getInst(uop)))
-        dromajo.io.wdata  := Cat(rob.io.commit.uops.map(uop => getWdata(uop)))
+        dromajo.io.pc     := Cat(rob.io.commit.uops.reverse.map(uop => Sext(uop.debug_pc(vaddrBits-1,0), xLen)))
+        dromajo.io.inst   := Cat(rob.io.commit.uops.reverse.map(uop => getInst(uop)))
+        dromajo.io.wdata  := Cat(rob.io.commit.uops.reverse.map(uop => getWdata(uop)))
         dromajo.io.mstatus := 0.U // Currently not used in Dromajo
         dromajo.io.check   := ((1 << coreWidth) - 1).U
         dromajo.io.int_xcpt := rob.io.com_xcpt.valid
