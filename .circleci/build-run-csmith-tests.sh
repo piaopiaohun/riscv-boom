@@ -1,6 +1,13 @@
 #!/bin/bash
 
+#-------------------------------------------------------------
 # test the verilator simulation using csmith random testing
+#
+# run location: circle ci docker image
+# usage:
+#   $1 - config string
+#   $2 - name of the toolchain to build
+#-------------------------------------------------------------
 
 # turn echo on and error on earliest command
 set -ex
@@ -9,7 +16,7 @@ set -ex
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 source $SCRIPT_DIR/defaults.sh
 
-SIM_BASE=simulator-example-
+SIM_BASE=simulator-chipyard-
 CONFIG=$(echo ${mapping[$1]} | sed -n -e 's/^.*CONFIG=\([a-zA-Z0-9]*\).*/\1/p')
 SIM=${SIM_BASE}${CONFIG}
 AMT_RUNS=$2
